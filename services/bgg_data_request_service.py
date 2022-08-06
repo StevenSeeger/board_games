@@ -1,5 +1,6 @@
 from typing import List
 from xmlrpc.client import ResponseError
+import xmltodict
 import requests
 import re
 
@@ -38,6 +39,16 @@ def get_top_games() -> List:
 
     return top_games
 
+def get_hot_games() -> List:
+    api_url = "https://boardgamegeek.com/xmlapi2/hot?boardgame"
+    response = requests.get(api_url, stream=True)
+    game_list = xmltodict.parse(response.content)['items']['item']
+    hot_50 = []
+    for game in game_list:
+        hot_50.append([game['@rank'], game['@id'], game['name']['@value']])
+    
+    return hot_50
+
 def _get_data() -> List:
     url = 'https://boardgamegeek.com/browse/boardgame'
     response = requests.get(url, stream=True)
@@ -56,8 +67,13 @@ def _get_rank_from_bgg_id(bgg_id: int) -> int:
     response_stats = response_str.split("<statistics page=")[1]
 
     rank_pattern = re.compile("\"Board Game Rank\" value=\"\d+\"")
-    rank = rank_pattern.search(response_stats).group(0)
-    rank = int(re.search(r'\d+', rank).group())
+    rank = rank_pattern.search(response_stats)
+    if rank is None:
+        return None
+    rank = rank.group(0)
+    rank = re.search(r'\d+', rank).group()
+    if rank:
+        rank = int(rank)
 
     return rank
 

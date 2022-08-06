@@ -1,6 +1,7 @@
 import sqlite3
-from services.bgg_data_request_service import get_new_ranks
 from typing import NewType
+
+from services.bgg_data_request_service import get_new_ranks
 
 DBConnection = NewType('DBConnection', sqlite3.Connection)
 
@@ -14,11 +15,33 @@ def create_tables(db_con: DBConnection) -> None:
         db_con (DBConnection) : Database DBConnection
     """
     _create_raw_top_board_games_table(db_con)
+    _create_raw_hot_board_games_table(db_con)
     _create_dim_board_games_table(db_con)
     _create_fact_top_games_table(db_con)
     _create_new_ranks_needed_view(db_con)
     _create_raw_new_ranks_table(db_con)
     return
+
+def _create_raw_hot_board_games_table(db_con):
+    """Create raw table for hot board games
+    
+    This function creates the raw_hot_board_games
+    table if it doesnt exist
+    
+    Args:
+        db_con (DBConnection) : Database Connection
+    """
+
+    with db_con:
+        db_con.execute(
+            """
+                CREATE TABLE IF NOT EXISTS raw_hot_board_games (
+                    hot_rank TEXT,
+                    bgg_id TEXT,
+                    name TEXT
+                );
+            """
+    )
 
 def _create_raw_top_board_games_table(db_con: DBConnection) -> None:
     """Creates raw table for top board games
@@ -88,7 +111,7 @@ def _create_fact_top_games_table(db_con: DBConnection) -> None:
 def _create_raw_new_ranks_table(db_con: DBConnection) -> None:
     """Creates a raw datatable for new ranks
     
-    This function creates the raw_new_ranks
+    This function creates the raw_ranks_new
     table when it doesn't exist
 
     Args:
@@ -98,13 +121,13 @@ def _create_raw_new_ranks_table(db_con: DBConnection) -> None:
         db_con.execute(
         """
             CREATE TABLE IF NOT EXISTS raw_ranks_new (
-                board_game_id TEXT UNIQUE,
+                bgg_id TEXT,
                 rank TEXT
         );
         """
         )
 
-def load_in_new_data(db_con: DBConnection, board_game_data: list) -> None:
+def load_in_top_board_games(db_con: DBConnection, board_game_data: list) -> None:
     """Load in new data from BGG for Top Games
 
     This function uses raw data to load in new game data
@@ -115,9 +138,64 @@ def load_in_new_data(db_con: DBConnection, board_game_data: list) -> None:
         board_game_data (list) : Board Game Data in the format of [rank, bgg_id, name]
     """
     _load_top_games_raw(db_con, board_game_data)
-    _process_new_board_games(db_con)
+    _process_new_board_games(db_con, type='top')
     _update_top_games(db_con)
     return
+
+def load_in_hot_board_games(db_con: DBConnection, board_game_data: list) -> None:
+    """Load in hot board games from BGG
+    
+    This function loads in the hot board games from 
+    Board Game Geeks, and updates the fact_hot_games
+    table
+    
+    Args:
+        db_con (DBConnection) : Database DBConnection
+        board_game_data (list) : Board Game Data in the format of [rank, bgg_id, name]
+    """
+    _load_hot_games_raw(db_con, board_game_data)
+    _process_new_board_games(db_con, type='hot')
+    # TODO: update hot games
+    _insert_new_hot_games(db_con)
+    _insert_hot_games_rank(db_con)
+
+def _insert_hot_games_rank(db_con: DBConnection) -> None:
+    """Gets all duplicates and NULL ranks from fact_top_games and tries to pull new ranks
+
+    This function gets all duplicates and NULL ranks
+    from fact_top_games and tries to pull new ranks
+
+    Args:
+        db_con (DBConnection) : Database DBConnection
+        board_game_data (list) : Board Game Data in the format of [rank, bgg_id, name]
+    """
+    bgg_ids, update_ranks = _get_bgg_ids_that_need_new_ranks(db_con)
+    if update_ranks:
+        print(f"Querying and updating {len(bgg_ids)} ranks")
+        new_ranks = get_new_ranks(bgg_ids)
+        _update_top_ranks(db_con, new_ranks)
+    else:
+        print(f"`Fact Top Games` needs no updates")
+    return
+
+def _load_hot_games_raw(db_con: DBConnection, board_game_data: list) -> None:
+    """Load in raw hot game data
+
+    This function raw loads data from board game geeks
+
+    Args:
+        db_con (DBConnection) : Database DBConnection.
+        board_game_data (list) : Board Game Data in the format of [rank, bgg_id, name]
+    """
+
+    query = 'DELETE FROM raw_hot_board_games'
+    with db_con:
+        db_con.execute(query)
+
+    query = 'INSERT INTO raw_hot_board_games (hot_rank, bgg_id, name) VALUES (?, ?, ?)'
+    with db_con:
+        db_con.executemany(query, board_game_data)
+
 
 def _load_top_games_raw(db_con: DBConnection, board_game_data: list) -> None:
     """Load in raw top game data
@@ -136,7 +214,7 @@ def _load_top_games_raw(db_con: DBConnection, board_game_data: list) -> None:
     with db_con:
         db_con.executemany(query, board_game_data)
 
-def _process_new_board_games(db_con: DBConnection) -> None:
+def _process_new_board_games(db_con: DBConnection, type) -> None:
     """Processes raw top board games
 
     This function process processes raw top
@@ -148,13 +226,13 @@ def _process_new_board_games(db_con: DBConnection) -> None:
     #TODO: Get the number of new board games added
     with db_con:
         db_con.execute(
-        """
+        f"""
             INSERT OR IGNORE INTO dim_board_games
                 (name, bgg_id)
             SELECT
                 name,
                 CAST(bgg_id AS NUMERIC)
-            FROM raw_top_board_games;
+            FROM raw_{type}_board_games;
         """
         )
 
@@ -173,11 +251,32 @@ def _update_top_games(db_con: DBConnection) -> None: #TODO: Refactor this
     if update_ranks:
         print(f"Querying and updating {len(bgg_ids)} ranks")
         new_ranks = get_new_ranks(bgg_ids)
-        _update_top_ranks(new_ranks)
+        _update_top_ranks(db_con, new_ranks)
     else:
         print(f"`Fact Top Games` needs no updates")
     return
 
+def _insert_new_hot_games(db_con: DBConnection) -> None:
+    """Insert new hot games into fact_top_games
+    
+    This function inserts all hot games into fact_top_games
+    with ranking of NULL
+    
+    Args:
+        db_con (DBConnection) : Database DBConnection
+    """
+    with db_con:
+        db_con.execute("""
+            INSERT INTO fact_top_games
+                (board_game_id, rank)
+            SELECT
+                dbg.id as board_game_id,
+                CAST(NULL AS NUMERIC) as rank
+            FROM dim_board_games dbg
+            INNER JOIN raw_hot_board_games AS raw_bg
+                ON dbg.bgg_id = CAST(raw_bg.bgg_id AS NUMERIC)
+            ON CONFLICT(board_game_id) DO UPDATE SET rank = rank, updated_date = current_timestamp
+        """)
 
 def _insert_new_top_games(db_con: DBConnection) -> None:
     """Insert new ranks to fact_top_games
@@ -233,7 +332,8 @@ def _create_new_ranks_needed_view(db_con: DBConnection) -> None:
                 FROM fact_top_games
                 GROUP BY rank
                 HAVING COUNT(1) > 1
-            );
+            )
+            OR rank IS NULL;
             """
         )
 
@@ -278,7 +378,7 @@ def _update_top_ranks(db_con: DBConnection, new_ranks: list) -> None:
     _update_new_ranks(db_con)
 
 def _insert_raw_new_ranks(db_con: DBConnection, new_ranks: list) -> None:
-    """Loads data into the raw_new_ranks table
+    """Loads data into the raw_ranks_new table
 
     This function clears out the raw table and
     then loads data into the raw table
@@ -287,16 +387,16 @@ def _insert_raw_new_ranks(db_con: DBConnection, new_ranks: list) -> None:
         db_con (DBConnection) : Database DBConnection
         new_ranks (list) : List of the new ranks in format [bgg_id, rank]
     """
-    query = 'DELETE FROM raw_new_ranks'
+    query = 'DELETE FROM raw_ranks_new'
     with db_con:
         db_con.execute(query)
 
-    query = 'INSERT INTO raw_top_board_games (bgg_id, ranks) VALUES (?, ?, ?)'
+    query = 'INSERT INTO raw_ranks_new (bgg_id, rank) VALUES (?, ?)'
     with db_con:
         db_con.executemany(query, new_ranks)
 
 def _update_new_ranks(db_con: DBConnection):
-    """Updates fact_top_games with new ranks from raw_new_ranks
+    """Updates fact_top_games with new ranks from raw_ranks_new
 
     This function updates fact_top_ranks with the
     new need ranks data
@@ -309,12 +409,14 @@ def _update_new_ranks(db_con: DBConnection):
             """
             UPDATE fact_top_games
             SET 
-                fact_top_games.rank = CAST(raw_new_ranks.rank AS NUMERIC),
-                date_updated = current_timestamp
+                rank = CAST(raw_ranks_new.rank AS NUMERIC),
+                updated_date = current_timestamp
             FROM
-                raw_new_ranks
+                raw_ranks_new
+            INNER JOIN dim_board_games ON
+                raw_ranks_new.bgg_id = dim_board_games.bgg_id
             WHERE
-                fact_top_games.bgg_id = CAST(raw_new_ranks.bgg_id AS NUMERIC)
+                fact_top_games.board_game_id = dim_board_games.id
             """
         )
 

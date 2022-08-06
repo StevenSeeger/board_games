@@ -32,8 +32,10 @@ def create_num_per_rank_data(db_con) -> px.pie:
                 ORDER BY 2 DESC
             )
             SELECT
-                num_per_rank, COUNT(1) AS num_of_each_rank\
+                CASE WHEN rank IS NULL THEN 'No Rating' ELSE num_per_rank END,
+                COUNT(1) AS num_of_each_rank
             FROM num_per_rank
+            GROUP BY 1
             """
         )
         data = data.fetchall()
@@ -42,7 +44,7 @@ def create_num_per_rank_data(db_con) -> px.pie:
         df,
         names='Unique Counts per Rank',
         values='Count',
-        title="Number of Board Games by Each Rank<br><sup>fact_top_games</sup>",
+        title="Unique Count per Rank<br><sup>fact_top_games</sup>",
         hole=.5
     )
     return fig_pie
