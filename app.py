@@ -2,7 +2,7 @@ from dash import Dash, html, dcc
 import plotly.express as px
 import sqlite3
 import pandas as pd
-from monitoring_data_service import create_num_per_rank_data, graph_fact_top_games_date_affected, graph_num_games_created_per_date, colors
+from services.monitoring_data_service import create_num_per_rank_data, graph_fact_top_games_date_affected, graph_num_games_created_per_date, colors
 
 app = Dash(__name__)
 con = sqlite3.connect('data/board_games.db')

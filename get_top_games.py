@@ -1,5 +1,5 @@
-from bgg_data_request_service import get_top_games
-from board_game_db_service import create_tables, drop_all_tables, load_in_new_data
+from services.bgg_data_request_service import get_top_games
+from services.board_game_db_service import create_tables, drop_all_tables, load_in_new_data
 import sqlite3
 
 def main():

@@ -1,5 +1,5 @@
 import sqlite3
-from bgg_data_request_service import get_new_ranks
+from services.bgg_data_request_service import get_new_ranks
 from typing import NewType
 
 DBConnection = NewType('DBConnection', sqlite3.Connection)
