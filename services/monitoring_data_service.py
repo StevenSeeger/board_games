@@ -32,8 +32,8 @@ def create_num_per_rank_data(db_con) -> px.pie:
                 ORDER BY 2 DESC
             )
             SELECT
-                CASE WHEN rank IS NULL THEN 'No Rating' ELSE num_per_rank END,
-                COUNT(1) AS num_of_each_rank
+                CASE WHEN rank IS NULL THEN 'No Ranking' ELSE num_per_rank END,
+                SUM(num_per_rank) AS num_of_each_rank
             FROM num_per_rank
             GROUP BY 1
             """
@@ -78,6 +78,7 @@ def graph_num_games_created_per_date(db_con) -> px.bar:
     df = pd.DataFrame(data, columns=['Date', 'Type', 'Count'])
     fig = px.bar(df, x='Date', y='Count', title='Num Board Games Per Day<br><sup>dim_board_games</sup>', color='Type', barmode='group')
     fig.update_xaxes(dtick=86400000)
+    fig.update_layout(bargroupgap=0.0, barmode='group', bargap=0.75, xaxis={"rangeslider":{"visible":True}})
     return fig
 
 @apply_layout
