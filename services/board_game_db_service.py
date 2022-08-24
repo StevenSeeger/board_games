@@ -1,7 +1,7 @@
 import sqlite3
 from typing import NewType
 
-from services.bgg_data_request_service import get_new_ranks
+from services.bgg_data_request_service import get_new_ranks, get_board_game_description
 
 DBConnection = NewType('DBConnection', sqlite3.Connection)
 
@@ -419,6 +419,22 @@ def _update_new_ranks(db_con: DBConnection):
                 fact_top_games.board_game_id = dim_board_games.id
             """
         )
+
+def get_board_game_descriptions(db_con: DBConnection):
+    with db_con:
+        result = db_con.execute('''
+            SELECT board_game_id, bgg_id
+            FROM desc_needed
+        ''')
+        for row in result.fetchall():
+            desc = get_board_game_description(row[1])
+            query = """
+                INSERT INTO board_game_descriptions 
+                (board_game_id, description) VALUES (?, ?)
+                ON CONFLICT(board_game_id) DO UPDATE
+                SET description = (?), updated_date = current_timestamp
+            """
+            db_con.execute(query, [row[0], desc, desc])
 
 def drop_all_tables(db_con) -> None:
     """Drop all tables from the database

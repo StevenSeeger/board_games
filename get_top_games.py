@@ -1,5 +1,5 @@
 from services.bgg_data_request_service import get_top_games, get_hot_games
-from services.board_game_db_service import create_tables, drop_all_tables, load_in_hot_board_games, load_in_top_board_games
+from services.board_game_db_service import create_tables, drop_all_tables, get_board_game_descriptions, load_in_hot_board_games, load_in_top_board_games
 import sqlite3
 
 def main():
@@ -9,6 +9,7 @@ def main():
     load_in_top_board_games(con, top_games)
     hot_games = get_hot_games()
     load_in_hot_board_games(con, hot_games)
+    get_board_game_descriptions(con)
     return
 
 if __name__ == "__main__":

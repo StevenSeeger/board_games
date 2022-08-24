@@ -1,8 +1,10 @@
+import string
 from typing import List
 from xmlrpc.client import ResponseError
 import xmltodict
 import requests
 import re
+import html
 
 def get_top_games() -> List:
     response_list = _get_data()
@@ -87,3 +89,24 @@ def get_new_ranks(bgg_ids: list) -> list:
         new_ranks.append([bgg_id[0], rank])
 
     return new_ranks
+
+def get_board_game_description(bgg_id: int) -> string:
+    url = f'https://boardgamegeek.com/xmlapi2/thing?id={bgg_id}&stats=1'
+    response = requests.get(url, stream=True)
+    
+    response_str = str(response.content)
+    response_desc = re.split(r'</?description>', response_str)
+    if len(response_desc) == 1:
+        return None
+    else:
+        response_desc = response_desc[1]
+    for _ in range(3):
+        response_desc = html.unescape(response_desc)
+
+    response_desc = response_desc.strip('\n')
+    response_desc = response_desc.strip('\t')
+    response_desc = re.sub(r'\s+', ' ', response_desc)
+    # response_desc = re.escape(response_desc)
+
+    return response_desc
+    
