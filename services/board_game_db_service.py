@@ -337,7 +337,7 @@ def _create_new_ranks_needed_view(db_con: DBConnection) -> None:
             """
         )
 
-def _get_bgg_ids_that_need_new_ranks(db_con: DBConnection) -> tuple[list, bool]:
+def _get_bgg_ids_that_need_new_ranks(db_con: DBConnection):
     """Queries for bgg_ids that need new rank data
 
     This function grabs new rank data for when there
