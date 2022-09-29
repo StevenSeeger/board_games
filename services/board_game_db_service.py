@@ -32,8 +32,8 @@ def _create_raw_hot_board_games_table(db_con):
         db_con (DBConnection) : Database Connection
     """
 
-    with db_con:
-        db_con.execute(
+    with db_con.cursor() as curs:
+        curs.execute(
             """
                 CREATE TABLE IF NOT EXISTS raw_hot_board_games (
                     hot_rank TEXT,
@@ -52,8 +52,8 @@ def _create_raw_top_board_games_table(db_con: DBConnection) -> None:
     Args:
         db_con (DBConnection) : Database DBConnection
     """
-    with db_con:
-        db_con.execute(
+    with db_con.cursor() as curs:
+        curs.execute(
             """
             CREATE TABLE IF NOT EXISTS raw_top_board_games (
                 rank TEXT,
@@ -72,8 +72,8 @@ def _create_dim_board_games_table(db_con: DBConnection) -> None:
     Args:
         db_con (DBConnection) : Database DBConnection
     """
-    with db_con:
-        db_con.execute(
+    with db_con.cursor() as curs:
+        curs.execute(
         """
             CREATE TABLE IF NOT EXISTS dim_board_games (
                 id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
@@ -95,8 +95,8 @@ def _create_fact_top_games_table(db_con: DBConnection) -> None:
     Args:
         db_con (DBConnection) : Database DBConnection
     """
-    with db_con:
-        db_con.execute(
+    with db_con.cursor() as curs:
+        curs.execute(
         """
             CREATE TABLE IF NOT EXISTS fact_top_games (
                 board_game_id INTEGER UNIQUE,
@@ -117,8 +117,8 @@ def _create_raw_new_ranks_table(db_con: DBConnection) -> None:
     Args:
         db_con (DBConnection) : Database DBConnection
     """
-    with db_con:
-        db_con.execute(
+    with db_con.cursor() as curs:
+        curs.execute(
         """
             CREATE TABLE IF NOT EXISTS raw_ranks_new (
                 bgg_id TEXT,
@@ -189,12 +189,12 @@ def _load_hot_games_raw(db_con: DBConnection, board_game_data: list) -> None:
     """
 
     query = 'DELETE FROM raw_hot_board_games'
-    with db_con:
-        db_con.execute(query)
+    with db_con.cursor() as curs:
+        curs.execute(query)
 
     query = 'INSERT INTO raw_hot_board_games (hot_rank, bgg_id, name) VALUES (?, ?, ?)'
-    with db_con:
-        db_con.executemany(query, board_game_data)
+    with db_con.cursor() as curs:
+        curs.executemany(query, board_game_data)
 
 
 def _load_top_games_raw(db_con: DBConnection, board_game_data: list) -> None:
@@ -207,12 +207,12 @@ def _load_top_games_raw(db_con: DBConnection, board_game_data: list) -> None:
         board_game_data (list) : Board Game Data in the format of [rank, bgg_id, name]
     """
     query = 'DELETE FROM raw_top_board_games'
-    with db_con:
-        db_con.execute(query)
+    with db_con.cursor() as curs:
+        curs.execute(query)
 
     query = 'INSERT INTO raw_top_board_games (rank, bgg_id, name) VALUES (?, ?, ?)'
-    with db_con:
-        db_con.executemany(query, board_game_data)
+    with db_con.cursor() as curs:
+        curs.executemany(query, board_game_data)
 
 def _process_new_board_games(db_con: DBConnection, type) -> None:
     """Processes raw top board games
@@ -224,8 +224,8 @@ def _process_new_board_games(db_con: DBConnection, type) -> None:
         db_con (DBConnection) : Database DBConnection.
     """
     #TODO: Get the number of new board games added
-    with db_con:
-        db_con.execute(
+    with db_con.cursor() as curs:
+        curs.execute(
         f"""
             INSERT OR IGNORE INTO dim_board_games
                 (name, bgg_id)
@@ -265,8 +265,8 @@ def _insert_new_hot_games(db_con: DBConnection) -> None:
     Args:
         db_con (DBConnection) : Database DBConnection
     """
-    with db_con:
-        db_con.execute("""
+    with db_con.cursor() as curs:
+        curs.execute("""
             INSERT INTO fact_top_games
                 (board_game_id, rank)
             SELECT
@@ -288,8 +288,8 @@ def _insert_new_top_games(db_con: DBConnection) -> None:
     Args:
         db_con (DBConnection) : Database DBConnection.
     """
-    with db_con:
-        db_con.execute(
+    with db_con.cursor() as curs:
+        curs.execute(
         """
             INSERT INTO fact_top_games
                 (board_game_id, rank)
@@ -319,8 +319,8 @@ def _create_new_ranks_needed_view(db_con: DBConnection) -> None:
     """
     # TODO: only get the items with the most recent date_updated to increase efficency
     # TODO: Need to also query for ranks that don't fall in the top 100
-    with db_con:
-        data = db_con.executescript(
+    with db_con.cursor() as curs:
+        data = curs.executescript(
             """
             CREATE VIEW IF NOT EXISTS new_ranks_needed AS
             SELECT dbg.bgg_id
@@ -347,8 +347,8 @@ def _get_bgg_ids_that_need_new_ranks(db_con: DBConnection):
         db_con (DBConnection) : Database DBConnection.
     """
     bgg_ids = []
-    with db_con:
-        data = db_con.execute(
+    with db_con.cursor() as curs:
+        data = curs.execute(
             """
             SELECT bgg_id
             FROM new_ranks_needed;
@@ -388,12 +388,12 @@ def _insert_raw_new_ranks(db_con: DBConnection, new_ranks: list) -> None:
         new_ranks (list) : List of the new ranks in format [bgg_id, rank]
     """
     query = 'DELETE FROM raw_ranks_new'
-    with db_con:
-        db_con.execute(query)
+    with db_con.cursor() as curs:
+        curs.execute(query)
 
     query = 'INSERT INTO raw_ranks_new (bgg_id, rank) VALUES (?, ?)'
-    with db_con:
-        db_con.executemany(query, new_ranks)
+    with db_con.cursor() as curs:
+        curs.executemany(query, new_ranks)
 
 def _update_new_ranks(db_con: DBConnection):
     """Updates fact_top_games with new ranks from raw_ranks_new
@@ -404,8 +404,8 @@ def _update_new_ranks(db_con: DBConnection):
     Args:
         db_con (DBConnection) : Database DBConnection.
     """
-    with db_con:
-        db_con.execute(
+    with db_con.cursor() as curs:
+        curs.execute(
             """
             UPDATE fact_top_games
             SET 
@@ -421,8 +421,8 @@ def _update_new_ranks(db_con: DBConnection):
         )
 
 def get_board_game_descriptions(db_con: DBConnection):
-    with db_con:
-        result = db_con.execute('''
+    with db_con.cursor() as curs:
+        result = curs.execute('''
             SELECT board_game_id, bgg_id
             FROM desc_needed
         ''')
@@ -434,7 +434,53 @@ def get_board_game_descriptions(db_con: DBConnection):
                 ON CONFLICT(board_game_id) DO UPDATE
                 SET description = (?), updated_date = current_timestamp
             """
-            db_con.execute(query, [row[0], desc, desc])
+            curs.execute(query, [row[0], desc, desc])
+
+def process_descriptions(db_con):
+    with db_con.cursor() as curs:
+        query = """
+            INSERT INTO board_game_descriptions (board_game_id, description)
+            SELECT bgg_id AS board_game_id, description FROM raw_board_game_info WHERE true
+            ON CONFLICT(board_game_id) DO UPDATE
+            SET description = excluded.description, updated_date = current_timestamp;
+        """
+        curs.execute(query)
+
+def process_raw_bg_data(db_con):
+    with db_con.cursor() as curs:
+        query = """
+            UPDATE dim_board_games
+            SET
+                name = rbgi.primary_name,
+                year_published = CAST(rbgi.year_published AS INTEGER),
+                min_players = CAST(rbgi.min_players AS INTEGER),
+                max_players = CAST(rbgi.max_players AS INTEGER),
+                playing_time = CAST(rbgi.playing_time AS INTEGER),
+                min_play_time = CAST(rbgi.min_play_time AS INTEGER),
+                max_play_time = CAST(rbgi.max_play_time AS INTEGER),
+                min_age = CAST(rbgi.min_age AS INTEGER),
+                board_game_category_ids = rbgi.board_game_category_ids,
+                board_game_mechanic_ids = rbgi.board_game_mechanic_ids,
+                board_game_family_ids = rbgi.board_game_family_ids,
+                board_game_designer_ids = rbgi.board_game_designer_ids,
+                board_game_publisher_ids = rbgi.board_game_publisher_ids,
+                users_rated = CAST(rbgi.users_rated AS INTEGER),
+                average = CAST(rbgi.average AS REAL),
+                bayes_average = CAST(rbgi.bayes_average AS REAL),
+                rank_value = CAST(NULLIF(rbgi.rank_value, 'Not Ranked') AS INTEGER),
+                rank_bayes_average = CAST(rbgi.rank_bayes_average AS REAL),
+                std_dev = CAST(rbgi.std_dev AS REAL),
+                median = CAST(rbgi.median AS REAL),
+                num_comments = CAST(rbgi.num_comments AS INTEGER),
+                num_weights = CAST(rbgi.num_weights AS INTEGER),
+                average_weight = CAST(rbgi.average_weight AS REAL),
+                description = rbgi.description,
+                board_game_artist_ids = rbgi.board_game_artist_ids,
+                updated_date = current_timestamp
+            FROM raw_board_game_info rbgi
+            WHERE CAST(rbgi.bgg_id AS INTEGER) = dim_board_games.bgg_id;
+            """
+        curs.execute(query)
 
 def drop_all_tables(db_con) -> None:
     """Drop all tables from the database
@@ -448,8 +494,8 @@ def drop_all_tables(db_con) -> None:
     """
     tables = ['dim_board_games', 'fact_top_games', 'raw_top_board_games']
     for table in tables:
-        with db_con:
-            db_con.execute(
+        with db_con.cursor() as curs:
+            curs.execute(
                 f"""
                 DROP TABLE IF EXISTS {table};
                 """

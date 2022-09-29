@@ -154,6 +154,10 @@ cython_debug/
 
 # exclude folder
 dev_files/
+logs/
+
+# exclude temp tiles
+*~
 
 # PyCharm
 #  JetBrains specific template is maintained in a separate JetBrains.gitignore that can

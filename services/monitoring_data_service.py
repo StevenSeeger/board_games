@@ -71,7 +71,7 @@ def graph_num_games_created_per_date(db_con) -> px.bar:
             FROM dim_board_games
             GROUP BY 1
             ORDER BY 1 DESC
-            LIMIT 10
+            LIMIT 60
             """
         )
         data = data.fetchall()
@@ -102,13 +102,15 @@ def graph_fact_top_games_date_affected(db_con) -> px.bar:
             FROM fact_top_games
             GROUP BY 1
             ORDER BY 1 DESC
-            LIMIT 10
+            LIMIT 30
             """
         )
         data = data.fetchall()
     df = pd.DataFrame(data, columns=['Date', 'Type', 'Count'])
     fig = px.bar(df, x='Date', y='Count', title='Rank Created/Updated<br><sup>fact_top_games</sup>', color='Type', barmode='group')
     fig.update_xaxes(dtick=86400000)
+    fig.update_yaxes(range = [0,10])
+    fig.update_layout(bargroupgap=0.0, barmode='group', bargap=0.75, xaxis={"rangeslider":{"visible":True}})
     return fig
 
 @apply_layout
@@ -122,7 +124,7 @@ def pie_bg_descriptions(db_con) -> px.pie:
                     ELSE 'has_description'
                 END AS no_description,
                 COUNT(1) AS count
-            FROM board_game_descriptions
+            FROM dim_board_games
             GROUP BY 1;
             """
         )
@@ -146,7 +148,7 @@ def graph_bg_descriptions_dates(db_con) -> px.bar:
                 date(created_date) AS date,
                 'Created',
                 COUNT(1)
-            FROM board_game_descriptions
+            FROM dim_board_games
             GROUP BY 1
 
             UNION ALL
@@ -155,10 +157,10 @@ def graph_bg_descriptions_dates(db_con) -> px.bar:
                 date(updated_date) AS date,
                 'Updated',
                 COUNT(1)
-            FROM board_game_descriptions
+            FROM dim_board_games
             GROUP BY 1
             ORDER BY 1 DESC
-            LIMIT 10
+            LIMIT 20
             """
         )
         data = data.fetchall()

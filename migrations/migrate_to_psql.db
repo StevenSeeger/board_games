@@ -1,0 +1,24 @@
+load database
+    from sqlite:///home/steven/Code/board_games/data/board_games.db 
+    into pgsql://pgloader_role:password@127.0.0.1/board_game
+CAST column dim_board_games.created_date TO "timestamptz DEFAULT now()" drop DEFAULT,
+    column dim_board_games.updated_date TO "timestamptz DEFAULT now()" drop DEFAULT,
+    column fact_top_games.created_date TO "timestamptz DEFAULT now()" drop DEFAULT,
+    column fact_top_games.updated_date TO "timestamptz DEFAULT now()" drop DEFAULT,
+    column board_game_descriptions.created_date TO "timestamptz DEFAULT now()" drop DEFAULT,
+    column board_game_descriptions.updated_date TO "timestamptz DEFAULT now()" drop DEFAULT,
+    column categories.created_date TO "timestamptz DEFAULT now()" drop DEFAULT,
+    column categories.updated_date TO "timestamptz DEFAULT now()" drop DEFAULT,
+    column mechanics.created_date TO "timestamptz DEFAULT now()" drop DEFAULT,
+    column mechanics.updated_date TO "timestamptz DEFAULT now()" drop DEFAULT,
+    column families.created_date TO "timestamptz DEFAULT now()" drop DEFAULT,
+    column families.updated_date TO "timestamptz DEFAULT now()" drop DEFAULT,
+    column publishers.created_date TO "timestamptz DEFAULT now()" drop DEFAULT,
+    column publishers.updated_date TO "timestamptz DEFAULT now()" drop DEFAULT,
+    column designers.created_date TO "timestamptz DEFAULT now()" drop DEFAULT,
+    column designers.updated_date TO "timestamptz DEFAULT now()" drop DEFAULT,
+    column artists.created_date TO "timestamptz DEFAULT now()" drop DEFAULT,
+    column artists.updated_date TO "timestamptz DEFAULT now()" drop DEFAULT
+with include drop, create tables, create indexes, reset sequences
+
+set work_mem to '16MB', maintenance_work_mem to '512 MB';
