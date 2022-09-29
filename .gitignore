@@ -155,6 +155,7 @@ cython_debug/
 # exclude folder
 dev_files/
 logs/
+notes/
 
 # exclude temp tiles
 *~
