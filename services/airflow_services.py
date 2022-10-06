@@ -123,10 +123,9 @@ def update_ranks(db_con):
             SELECT bgg_id
             FROM new_ranks_needed;
         """)
-        if results is not None:
-            bgg_ids = results.fetchall()
+        bgg_ids = curs.fetchall()
 
-    if results is None:
+    if bgg_ids == []:
         return
 
     new_ranks = get_new_ranks(bgg_ids)
@@ -139,15 +138,16 @@ def get_needed_board_game_data(db_con):
             DELETE FROM raw_board_game_info;
         """)
 
+    with db_con.cursor() as curs:
         results = curs.execute("""
             SELECT DISTINCT bgg_id
             FROM dim_board_games
             WHERE description IS NULL;
         """)
-        if results is not None:
-            bgg_ids = results.fetchall()
 
-    if results is None:
+        bgg_ids = curs.fetchall()
+
+    if bgg_ids == []:
         return
     
     for id in bgg_ids:
@@ -166,7 +166,7 @@ def _query_raw_board_game_data(db_con, bgg_id):
             board_game_designer_values, board_game_artist_ids, board_game_artist_values, board_game_publisher_ids,
             board_game_publisher_values, users_rated, average, bayes_average, rank_value, rank_bayes_average,
             std_dev, median, num_comments, num_weights, average_weight
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
         """
         curs.execute(query, data)
 
@@ -181,10 +181,9 @@ def update_bg_mapped_tables(db_con, table_name):
         """
         results = curs.execute(query)
         
-        if results is not None:
-            data = results.fetchall()
+        data = curs.fetchall()
 
-    if results is None:
+    if data == []:
         return
 
     all_ids = []
@@ -202,7 +201,7 @@ def update_bg_mapped_tables(db_con, table_name):
     with db_con.cursor() as curs:
         query = f"""
         INSERT INTO {table_name} (bgg_{column_name}_id, name)
-        VALUES (?, ?)
+        VALUES (%s, %s)
         ON CONFLICT(bgg_{column_name}_id) DO NOTHING
         """
         curs.executemany(query, data)

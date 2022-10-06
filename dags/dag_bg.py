@@ -14,6 +14,7 @@ from services.airflow_services import load_in_raw_top_games, load_in_raw_hot_gam
 import psycopg2
 
 con = psycopg2.connect(database="board_game", user='steven')
+con.autocommit = True
 
 # import sqlite3
 

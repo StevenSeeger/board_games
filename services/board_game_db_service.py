@@ -192,7 +192,7 @@ def _load_hot_games_raw(db_con: DBConnection, board_game_data: list) -> None:
     with db_con.cursor() as curs:
         curs.execute(query)
 
-    query = 'INSERT INTO raw_hot_board_games (hot_rank, bgg_id, name) VALUES (?, ?, ?)'
+    query = 'INSERT INTO raw_hot_board_games (hot_rank, bgg_id, name) VALUES (%s, %s, %s)'
     with db_con.cursor() as curs:
         curs.executemany(query, board_game_data)
 
@@ -210,7 +210,7 @@ def _load_top_games_raw(db_con: DBConnection, board_game_data: list) -> None:
     with db_con.cursor() as curs:
         curs.execute(query)
 
-    query = 'INSERT INTO raw_top_board_games (rank, bgg_id, name) VALUES (?, ?, ?)'
+    query = 'INSERT INTO raw_top_board_games (rank, bgg_id, name) VALUES (%s, %s, %s)'
     with db_con.cursor() as curs:
         curs.executemany(query, board_game_data)
 
@@ -391,7 +391,7 @@ def _insert_raw_new_ranks(db_con: DBConnection, new_ranks: list) -> None:
     with db_con.cursor() as curs:
         curs.execute(query)
 
-    query = 'INSERT INTO raw_ranks_new (bgg_id, rank) VALUES (?, ?)'
+    query = 'INSERT INTO raw_ranks_new (bgg_id, rank) VALUES (%s, %s)'
     with db_con.cursor() as curs:
         curs.executemany(query, new_ranks)
 
@@ -414,11 +414,12 @@ def _update_new_ranks(db_con: DBConnection):
             FROM
                 raw_ranks_new
             INNER JOIN dim_board_games ON
-                raw_ranks_new.bgg_id = dim_board_games.bgg_id
+                CAST(raw_ranks_new.bgg_id AS INT) = dim_board_games.bgg_id
             WHERE
                 fact_top_games.board_game_id = dim_board_games.id
             """
         )
+        db_con.commit()
 
 def get_board_game_descriptions(db_con: DBConnection):
     with db_con.cursor() as curs:
@@ -430,9 +431,9 @@ def get_board_game_descriptions(db_con: DBConnection):
             desc = get_board_game_description(row[1])
             query = """
                 INSERT INTO board_game_descriptions 
-                (board_game_id, description) VALUES (?, ?)
+                (board_game_id, description) VALUES (%s, %s)
                 ON CONFLICT(board_game_id) DO UPDATE
-                SET description = (?), updated_date = current_timestamp
+                SET description = (%s), updated_date = current_timestamp
             """
             curs.execute(query, [row[0], desc, desc])
 
@@ -468,7 +469,7 @@ def process_raw_bg_data(db_con):
                 average = CAST(rbgi.average AS REAL),
                 bayes_average = CAST(rbgi.bayes_average AS REAL),
                 rank_value = CAST(NULLIF(rbgi.rank_value, 'Not Ranked') AS INTEGER),
-                rank_bayes_average = CAST(rbgi.rank_bayes_average AS REAL),
+                rank_bayes_average = CAST(NULLIF(rbgi.rank_bayes_average, 'Not Ranked') AS REAL),
                 std_dev = CAST(rbgi.std_dev AS REAL),
                 median = CAST(rbgi.median AS REAL),
                 num_comments = CAST(rbgi.num_comments AS INTEGER),
